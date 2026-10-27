@@ -1,0 +1,39 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: instatic:local
+    restart: unless-stopped
+    environment:
+      PORT: "3001"
+      DATABASE_URL: sqlite:/app/data/cms.db
+      UPLOADS_DIR: /app/uploads
+      STATIC_DIR: /app/dist
+      INSTATIC_SECRET_KEY: ${INSTATIC_SECRET_KEY}
+      TRUSTED_PROXY_CIDRS: 172.16.0.0/12
+    volumes:
+      - uploads:/app/uploads
+      - data:/app/data
+    healthcheck:
+      test: ["CMD", "bun", "run", "server/healthcheck.ts"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.instatic.rule=Host(`instatic.carvajalmaxi.com.ar`)"
+      - "traefik.http.routers.instatic.entrypoints=websecure"
+      - "traefik.http.routers.instatic.tls.certresolver=letsencrypt"
+      - "traefik.http.services.instatic.loadbalancer.server.port=3001"
+      - "traefik.docker.network=dokploy-network"
+
+volumes:
+  uploads:
+  data:
+
+networks:
+  default:
+    name: dokploy-network
+    external: true
